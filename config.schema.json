@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "KlereoConnectHomebridgePlugin",
   "pluginType": "platform",
   "singular": true,
   "schema": {
