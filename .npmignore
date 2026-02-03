@@ -1,0 +1,28 @@
+# Development files
+src/
+tsconfig.json
+nodemon.json
+
+# Tests
+*.test.ts
+*.spec.ts
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/
+
+# Documentation
+API.md
+api_responses/
+
+# Misc
+*.log
+.DS_Store

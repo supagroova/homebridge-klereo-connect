@@ -1,0 +1,52 @@
+{
+  "displayName": "Klereo Connect",
+  "name": "homebridge-klereo-connect",
+  "version": "1.0.0",
+  "description": "Homebridge plugin for Klereo Connect swimming pool automation system",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lachlanlaycock/homebridge-klereo-connect.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lachlanlaycock/homebridge-klereo-connect/issues"
+  },
+  "engines": {
+    "node": "^20.0.0 || ^22.0.0 || ^24.0.0",
+    "homebridge": "^1.8.0 || ^2.0.0-beta.0"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "lint": "eslint src --max-warnings=0",
+    "watch": "npm run build && npm link && nodemon",
+    "build": "rimraf ./dist && tsc",
+    "prepublishOnly": "npm run lint && npm run build",
+    "test": "jest",
+    "test:live": "ts-node scripts/test-live-api.ts"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "klereo",
+    "pool",
+    "swimming-pool",
+    "automation",
+    "smart-home"
+  ],
+  "dependencies": {
+    "form-data": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.56.0",
+    "homebridge": "^1.8.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.3",
+    "rimraf": "^5.0.5",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

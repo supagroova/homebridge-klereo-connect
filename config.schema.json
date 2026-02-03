@@ -1,0 +1,73 @@
+{
+  "pluginAlias": "KlereoConnect",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Control your Klereo swimming pool system through HomeKit. Visit the [GitHub repository](https://github.com/lachlanlaycock/homebridge-klereo-connect) for more information.",
+  "footerDisplay": "For help and support, please visit the [issues page](https://github.com/lachlanlaycock/homebridge-klereo-connect/issues).",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "Klereo Connect",
+        "required": true,
+        "description": "The name that will appear in your Homebridge log."
+      },
+      "username": {
+        "title": "Klereo Username",
+        "type": "string",
+        "required": true,
+        "description": "Your Klereo Connect account username or email address."
+      },
+      "password": {
+        "title": "Klereo Password",
+        "type": "string",
+        "required": true,
+        "description": "Your Klereo Connect account password. This will be securely hashed before being sent to the API."
+      },
+      "pollingInterval": {
+        "title": "Polling Interval (ms)",
+        "type": "integer",
+        "default": 30000,
+        "minimum": 5000,
+        "maximum": 300000,
+        "description": "How often to check for status updates from the pool system (in milliseconds). Default is 30000 (30 seconds). Lower values provide faster updates but increase API load."
+      }
+    },
+    "required": ["username", "password"]
+  },
+  "layout": [
+    {
+      "type": "flex",
+      "flex-flow": "row wrap",
+      "items": [
+        {
+          "key": "name",
+          "flex": "1 1 50%"
+        }
+      ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Klereo Account",
+      "expandable": false,
+      "items": [
+        "username",
+        "password"
+      ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Advanced Settings",
+      "expandable": true,
+      "expanded": false,
+      "items": [
+        {
+          "key": "pollingInterval",
+          "description": "Adjust how frequently the plugin checks for updates. Lower values mean faster response to manual changes but more API calls."
+        }
+      ]
+    }
+  ]
+}
