@@ -1,5 +1,8 @@
 # homebridge-klereo-connect
 
+[![npm version](https://badge.fury.io/js/homebridge-klereo-connect.svg)](https://badge.fury.io/js/homebridge-klereo-connect)
+[![npm downloads](https://img.shields.io/npm/dt/homebridge-klereo-connect)](https://www.npmjs.com/package/homebridge-klereo-connect)
+
 Homebridge plugin for Klereo Connect swimming pool automation system. Control your pool lights, filters, heaters, and other equipment through Apple HomeKit.
 
 ## Features
