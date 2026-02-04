@@ -9,7 +9,7 @@ import {
 } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME, TOKEN_REFRESH_INTERVAL } from './settings';
-import { KlereoConnectConfig, PoolDetails, PoolOutput, IORename } from './types';
+import { KlereoConnectConfig, PoolDetails, PoolOutput } from './types';
 import { KlereoApi } from './klereoApi';
 import { PoolOutputAccessory } from './poolOutputAccessory';
 
@@ -128,7 +128,7 @@ export class KlereoConnectPlatform implements DynamicPlatformPlugin {
    * Register accessories for pool outputs (lights, filter, etc.)
    */
   private async registerPoolOutputs(poolDetails: PoolDetails) {
-    const { outs, IORename, idSystem, poolNickname } = poolDetails;
+    const { outs, IORename } = poolDetails;
 
     // Create a map of output names from IORename
     const outputNames = new Map<number, string>();

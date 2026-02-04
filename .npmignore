@@ -2,15 +2,31 @@
 src/
 tsconfig.json
 nodemon.json
+eslint.config.js
+jest.config.js
 
 # Tests
 *.test.ts
+*.test.js
+*.test.d.ts
+*.test.d.ts.map
+*.test.js.map
 *.spec.ts
+*.spec.js
 coverage/
+
+# Scripts
+scripts/
 
 # IDE
 .vscode/
 .idea/
+.claude/
+
+# Environment
+.env
+.env.local
+.env.*
 
 # Git
 .git/

@@ -1,5 +1,4 @@
 import { KlereoApi } from './klereoApi';
-import FormData from 'form-data';
 
 // Mock fetch globally
 global.fetch = jest.fn();

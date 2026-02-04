@@ -75,7 +75,7 @@ class KlereoConnectPlatform {
         }
     }
     async registerPoolOutputs(poolDetails) {
-        const { outs, IORename, idSystem, poolNickname } = poolDetails;
+        const { outs, IORename } = poolDetails;
         const outputNames = new Map();
         if (IORename) {
             for (const rename of IORename) {

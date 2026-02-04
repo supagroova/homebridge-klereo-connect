@@ -196,7 +196,7 @@ describe('PoolOutputAccessory', () => {
                 try {
                     await onSetCallback(true);
                 }
-                catch (error) {
+                catch {
                 }
                 jest.advanceTimersByTime(150);
                 expect(mockService.updateCharacteristic).toHaveBeenCalledWith('On', false);

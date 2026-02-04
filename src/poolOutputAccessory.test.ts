@@ -1,4 +1,4 @@
-import { PlatformAccessory, Service, Characteristic } from 'homebridge';
+import { PlatformAccessory } from 'homebridge';
 import { PoolOutputAccessory } from './poolOutputAccessory';
 import { KlereoConnectPlatform } from './platform';
 import { KlereoApi } from './klereoApi';
@@ -265,7 +265,7 @@ describe('PoolOutputAccessory', () => {
       if (onSetCallback) {
         try {
           await onSetCallback(true);
-        } catch (error) {
+        } catch {
           // Expected error
         }
 
