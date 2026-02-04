@@ -16,6 +16,15 @@
     "homebridge": "^1.8.0 || ^2.0.0-beta.0"
   },
   "main": "dist/index.js",
+  "homebridge": {
+    "plugin": "homebridge-klereo-connect",
+    "platforms": [
+      {
+        "platform": "KlereoConnect",
+        "schema": "config.schema.json"
+      }
+    ]
+  },
   "scripts": {
     "lint": "eslint src --max-warnings=0",
     "watch": "npm run build && npm link && nodemon",
