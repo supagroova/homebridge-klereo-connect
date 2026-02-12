@@ -11,19 +11,16 @@
         "title": "Name",
         "type": "string",
         "default": "Klereo Connect",
-        "required": true,
         "description": "The name that will appear in your Homebridge log."
       },
       "username": {
         "title": "Klereo Username",
         "type": "string",
-        "required": true,
         "description": "Your Klereo Connect account username or email address."
       },
       "password": {
         "title": "Klereo Password",
         "type": "string",
-        "required": true,
         "description": "Your Klereo Connect account password. This will be securely hashed before being sent to the API."
       },
       "pollingInterval": {
@@ -35,7 +32,7 @@
         "description": "How often to check for status updates from the pool system (in milliseconds). Default is 30000 (30 seconds). Lower values provide faster updates but increase API load."
       }
     },
-    "required": ["username", "password"]
+    "required": ["name", "username", "password"]
   },
   "layout": [
     {

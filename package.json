@@ -12,6 +12,7 @@
   "bugs": {
     "url": "https://github.com/supagroova/homebridge-klereo-connect/issues"
   },
+  "homepage": "https://github.com/supagroova/homebridge-klereo-connect",
   "engines": {
     "node": "^20.0.0 || ^22.0.0 || ^24.0.0",
     "homebridge": "^1.8.0 || ^2.0.0-beta.0"
