@@ -259,6 +259,29 @@ export interface SetOutResponse {
 }
 
 /**
+ * Response from SetParam (set a pool parameter like temperature setpoint)
+ */
+export interface SetParamResponse {
+  status: string;
+  response: Array<{
+    cmdID: number;
+    poolID: number;
+  }>;
+}
+
+/**
+ * Output map values (identifies output function via the 'map' field)
+ */
+export enum OutputMap {
+  LIGHTS = 0,
+  FILTER = 1,
+  PH_MINUS = 2,
+  CHLORINE = 3,
+  HEATING = 4,
+  ROBOT = 5,
+}
+
+/**
  * Response from WaitCommand (check command status)
  */
 export interface WaitCommandResponse {

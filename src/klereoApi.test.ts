@@ -328,6 +328,103 @@ describe('KlereoApi', () => {
     });
   });
 
+  describe('setParam', () => {
+    beforeEach(async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: 'ok',
+          jwt: 'mock-jwt-token',
+        }),
+      } as Response);
+
+      await api.authenticate();
+      mockFetch.mockClear();
+    });
+
+    it('should set parameter successfully and return command ID', async () => {
+      const mockResponse = {
+        status: 'ok',
+        response: [
+          {
+            cmdID: 3758348,
+            poolID: 17501,
+          },
+        ],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      } as Response);
+
+      const cmdId = await api.setParam(17501, 'ConsigneEau', 30);
+
+      expect(cmdId).toBe(3758348);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('SetParam.php'),
+        expect.anything(),
+      );
+    });
+
+    it('should throw on failed response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: 'error',
+          response: [],
+        }),
+      } as Response);
+
+      await expect(api.setParam(17501, 'ConsigneEau', 30)).rejects.toThrow(
+        'Failed to set parameter ConsigneEau',
+      );
+    });
+  });
+
+  describe('setParamAndWait', () => {
+    beforeEach(async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: 'ok',
+          jwt: 'mock-jwt-token',
+        }),
+      } as Response);
+
+      await api.authenticate();
+      mockFetch.mockClear();
+    });
+
+    it('should call setParam then waitForCommand', async () => {
+      // Mock SetParam response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: 'ok',
+          response: [{ cmdID: 3758348, poolID: 17501 }],
+        }),
+      } as Response);
+
+      // Mock WaitCommand response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: 'ok',
+          response: {
+            cmdID: 3758348,
+            status: 9,
+            detail: 'Ok',
+          },
+        }),
+      } as Response);
+
+      await api.setParamAndWait(17501, 'ConsigneEau', 30);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('token refresh', () => {
     it('should detect when token needs refresh', () => {
       expect(api.needsTokenRefresh()).toBe(true);

@@ -9,9 +9,10 @@ import {
 } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME, TOKEN_REFRESH_INTERVAL } from './settings';
-import { KlereoConnectConfig, PoolDetails, PoolOutput } from './types';
+import { KlereoConnectConfig, PoolDetails, PoolOutput, ProbeType, OutputMap } from './types';
 import { KlereoApi } from './klereoApi';
 import { PoolOutputAccessory } from './poolOutputAccessory';
+import { PoolHeaterAccessory } from './poolHeaterAccessory';
 
 /**
  * KlereoConnectPlatform
@@ -115,6 +116,7 @@ export class KlereoConnectPlatform implements DynamicPlatformPlugin {
 
         const poolDetails = detailsResponse.response[0];
         await this.registerPoolOutputs(poolDetails);
+        this.registerPoolHeater(poolDetails);
       }
 
       // Remove accessories that no longer exist
@@ -142,6 +144,11 @@ export class KlereoConnectPlatform implements DynamicPlatformPlugin {
 
     // Register each output as an accessory
     for (const output of outs) {
+      // Skip the heating output — handled by HeaterCooler accessory
+      if (output.map === OutputMap.HEATING) {
+        continue;
+      }
+
       // Skip outputs that are disabled or not configured
       if (output.mode === 0 && output.status === 0 && output.totalTime === 0) {
         continue;
@@ -216,6 +223,101 @@ export class KlereoConnectPlatform implements DynamicPlatformPlugin {
       );
 
       // Track it
+      this.accessories.push(accessory);
+    }
+  }
+
+  /**
+   * Register a HeaterCooler accessory for pool heating
+   */
+  private registerPoolHeater(poolDetails: PoolDetails) {
+    const { idSystem, poolNickname, outs, probes, IORename } = poolDetails;
+
+    // Find the water temperature probe
+    const waterProbe = probes.find(
+      (p) => p.type === ProbeType.WATER_TEMPERATURE,
+    );
+    if (!waterProbe) {
+      this.log.debug(
+        `No water temperature probe found for pool ${idSystem}, skipping heater accessory`,
+      );
+      return;
+    }
+
+    // Find the heating output (map === 4)
+    const heatingOutput = outs.find((o) => o.map === OutputMap.HEATING);
+    if (!heatingOutput) {
+      this.log.debug(
+        `No heating output found for pool ${idSystem}, skipping heater accessory`,
+      );
+      return;
+    }
+
+    // Get temperature range from params
+    const params = poolDetails.params || {};
+    const eauMin = typeof params.EauMin === 'number' ? params.EauMin : 0;
+    const eauMax = typeof params.EauMax === 'number' ? params.EauMax : 40;
+
+    // Determine display name from IORename or default
+    let heaterName = 'Pool Heater';
+    if (IORename) {
+      const rename = IORename.find(
+        (r) => r.ioType === 1 && r.ioIndex === heatingOutput.index,
+      );
+      if (rename) {
+        heaterName = rename.name;
+      }
+    }
+
+    // Generate unique UUID for the heater accessory
+    const uuid = this.homebridgeApi.hap.uuid.generate(
+      `klereo-${idSystem}-heater`,
+    );
+
+    const existingAccessory = this.accessories.find(
+      (a) => a.UUID === uuid,
+    );
+
+    if (existingAccessory) {
+      this.log.info(
+        'Restoring existing heater accessory from cache:',
+        existingAccessory.displayName,
+      );
+
+      existingAccessory.context.poolId = idSystem;
+      existingAccessory.context.poolName = poolNickname;
+      existingAccessory.context.heatingOutputIndex = heatingOutput.index;
+      existingAccessory.context.outputName = heaterName;
+      existingAccessory.context.eauMin = eauMin;
+      existingAccessory.context.eauMax = eauMax;
+
+      new PoolHeaterAccessory(this, existingAccessory, this.api);
+    } else {
+      this.log.info(
+        'Adding new heater accessory:',
+        `${poolNickname} - ${heaterName}`,
+      );
+
+      const accessory = new this.homebridgeApi.platformAccessory(
+        `${poolNickname} - ${heaterName}`,
+        uuid,
+      );
+
+      accessory.context.poolId = idSystem;
+      accessory.context.poolName = poolNickname;
+      accessory.context.heatingOutputIndex = heatingOutput.index;
+      accessory.context.outputName = heaterName;
+      accessory.context.eauMin = eauMin;
+      accessory.context.eauMax = eauMax;
+
+      new PoolHeaterAccessory(this, accessory, this.api);
+
+      this.homebridgeApi.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        [accessory],
+      );
+
       this.accessories.push(accessory);
     }
   }
