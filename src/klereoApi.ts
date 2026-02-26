@@ -4,6 +4,7 @@ import {
   GetIndexResponse,
   GetPoolDetailsResponse,
   SetOutResponse,
+  SetParamResponse,
   WaitCommandResponse,
 } from './types';
 import { API_BASE_URL } from './settings';
@@ -260,6 +261,60 @@ export class KlereoApi {
     state: boolean,
   ): Promise<void> {
     const cmdId = await this.setOutput(poolId, outputIndex, state);
+    await this.waitForCommand(cmdId);
+  }
+
+  /**
+   * Set a pool parameter (e.g., temperature setpoint)
+   * @param poolId Pool ID
+   * @param paramId Parameter ID (e.g., 'ConsigneEau')
+   * @param newValue The new value to set
+   * @returns Command ID
+   */
+  async setParam(
+    poolId: number,
+    paramId: string,
+    newValue: number,
+  ): Promise<number> {
+    await this.ensureAuthenticated();
+
+    this.logger?.debug(
+      `Setting pool ${poolId} param ${paramId} to ${newValue}`,
+    );
+
+    const response = await this.makeRequest<SetParamResponse>(
+      'SetParam.php',
+      {
+        poolID: poolId.toString(),
+        paramID: paramId,
+        newValue: newValue.toString(),
+        comMode: '1',
+        lang: 'en',
+      },
+    );
+
+    if (response.status !== 'ok' || !response.response[0]) {
+      throw new Error(`Failed to set parameter ${paramId}`);
+    }
+
+    const cmdID = response.response[0].cmdID;
+    this.logger?.debug(`Command ID ${cmdID} created for param ${paramId}`);
+
+    return cmdID;
+  }
+
+  /**
+   * Set a pool parameter and wait for command completion
+   * @param poolId Pool ID
+   * @param paramId Parameter ID (e.g., 'ConsigneEau')
+   * @param newValue The new value to set
+   */
+  async setParamAndWait(
+    poolId: number,
+    paramId: string,
+    newValue: number,
+  ): Promise<void> {
+    const cmdId = await this.setParam(poolId, paramId, newValue);
     await this.waitForCommand(cmdId);
   }
 }

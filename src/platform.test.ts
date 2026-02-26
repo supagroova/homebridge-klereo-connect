@@ -10,6 +10,11 @@ jest.mock('./poolOutputAccessory', () => ({
   PoolOutputAccessory: jest.fn(),
 }));
 
+// Mock PoolHeaterAccessory
+jest.mock('./poolHeaterAccessory', () => ({
+  PoolHeaterAccessory: jest.fn(),
+}));
+
 // Helper to flush all pending promises
 const flushPromises = () => Promise.resolve().then(() => Promise.resolve());
 
@@ -127,8 +132,39 @@ describe('KlereoConnectPlatform', () => {
                 updateTime: 0,
                 realStatus: 1,
               },
+              {
+                index: 5,
+                type: 0,
+                mode: 1,
+                status: 0,
+                totalTime: 500,
+                offDelay: 0,
+                flags: 16,
+                map: 4,
+                cloneSrc: 0,
+                updateTime: 0,
+                realStatus: 0,
+              },
             ],
-            probes: [],
+            probes: [
+              {
+                index: 16,
+                type: 5,
+                status: 0,
+                updated: 0,
+                filteredValue: 10.87,
+                filteredTime: 0,
+                directValue: 10.87,
+                directTime: 0,
+                updateTime: 0,
+              },
+            ],
+            params: {
+              ConsigneEau: 28,
+              HeaterMode: 1,
+              EauMin: 0,
+              EauMax: 40,
+            },
             IORename: [
               {
                 ioType: 1,
@@ -139,6 +175,11 @@ describe('KlereoConnectPlatform', () => {
                 ioType: 1,
                 ioIndex: 1,
                 name: 'Filter Pump',
+              },
+              {
+                ioType: 1,
+                ioIndex: 5,
+                name: 'Chauffage',
               },
             ],
             RegulModes: {
@@ -438,6 +479,227 @@ describe('KlereoConnectPlatform', () => {
 
       expect(mockApi.platformAccessory).toHaveBeenCalledWith(
         expect.stringContaining('Output 2'),
+        expect.any(String),
+      );
+    });
+  });
+
+  describe('registerPoolHeater', () => {
+    beforeEach(() => {
+      jest.useRealTimers();
+      platform = new KlereoConnectPlatform(mockLogger, mockConfig, mockApi);
+    });
+
+    afterEach(() => {
+      if (shutdownCallback) {
+        shutdownCallback();
+      }
+      jest.useFakeTimers();
+    });
+
+    it('should register heater accessory when heating output and water probe exist', async () => {
+      if (didFinishLaunchingCallback) {
+        didFinishLaunchingCallback();
+        await flushPromises();
+      }
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Adding new heater accessory:',
+        'Test Pool - Chauffage',
+      );
+      expect(mockApi.registerPlatformAccessories).toHaveBeenCalled();
+    });
+
+    it('should not register heater when no water probe exists', async () => {
+      mockKlereoApi.getPoolDetails.mockResolvedValueOnce({
+        status: 'ok',
+        response: [
+          {
+            idSystem: 12345,
+            poolNickname: 'Test Pool',
+            outs: [
+              {
+                index: 5,
+                type: 0,
+                mode: 1,
+                status: 0,
+                totalTime: 500,
+                offDelay: 0,
+                flags: 16,
+                map: 4,
+                cloneSrc: 0,
+                updateTime: 0,
+                realStatus: 0,
+              },
+            ],
+            probes: [],
+            params: { ConsigneEau: 28, HeaterMode: 1 },
+            IORename: [],
+          } as any,
+        ],
+      });
+
+      if (didFinishLaunchingCallback) {
+        didFinishLaunchingCallback();
+        await flushPromises();
+      }
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('No water temperature probe found'),
+      );
+      expect(mockLogger.info).not.toHaveBeenCalledWith(
+        'Adding new heater accessory:',
+        expect.any(String),
+      );
+    });
+
+    it('should not register heater when no heating output exists', async () => {
+      mockKlereoApi.getPoolDetails.mockResolvedValueOnce({
+        status: 'ok',
+        response: [
+          {
+            idSystem: 12345,
+            poolNickname: 'Test Pool',
+            outs: [
+              {
+                index: 0,
+                type: 0,
+                mode: 1,
+                status: 0,
+                totalTime: 1000,
+                offDelay: 0,
+                flags: 0,
+                map: 0,
+                cloneSrc: 0,
+                updateTime: 0,
+                realStatus: 0,
+              },
+            ],
+            probes: [
+              {
+                index: 16,
+                type: 5,
+                status: 0,
+                updated: 0,
+                filteredValue: 10.87,
+                filteredTime: 0,
+                directValue: 10.87,
+                directTime: 0,
+                updateTime: 0,
+              },
+            ],
+            params: { ConsigneEau: 28, HeaterMode: 1 },
+            IORename: [{ ioType: 1, ioIndex: 0, name: 'Pool Lights' }],
+          } as any,
+        ],
+      });
+
+      if (didFinishLaunchingCallback) {
+        didFinishLaunchingCallback();
+        await flushPromises();
+      }
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('No heating output found'),
+      );
+      expect(mockLogger.info).not.toHaveBeenCalledWith(
+        'Adding new heater accessory:',
+        expect.any(String),
+      );
+    });
+
+    it('should skip heating output (map=4) from Switch registration', async () => {
+      if (didFinishLaunchingCallback) {
+        didFinishLaunchingCallback();
+        await flushPromises();
+      }
+
+      // Should register Pool Lights and Filter Pump as switches, NOT the heating output
+      expect(mockApi.platformAccessory).toHaveBeenCalledWith(
+        expect.stringContaining('Pool Lights'),
+        expect.any(String),
+      );
+      expect(mockApi.platformAccessory).toHaveBeenCalledWith(
+        expect.stringContaining('Filter Pump'),
+        expect.any(String),
+      );
+
+      // The heater should be registered with its own name, not as "Output 5"
+      const calls = (mockApi.platformAccessory as unknown as jest.Mock).mock.calls;
+      const accessoryNames = calls.map((c: any[]) => c[0] as string);
+      expect(accessoryNames).not.toContain(expect.stringContaining('Output 5'));
+    });
+
+    it('should restore cached heater accessory', async () => {
+      const cachedHeaterAccessory = {
+        displayName: 'Test Pool - Chauffage',
+        UUID: 'uuid-klereo-12345-heater',
+        context: {},
+        getService: jest.fn(),
+        addService: jest.fn(),
+      } as unknown as PlatformAccessory;
+
+      platform.configureAccessory(cachedHeaterAccessory);
+
+      if (didFinishLaunchingCallback) {
+        didFinishLaunchingCallback();
+        await flushPromises();
+      }
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Restoring existing heater accessory from cache:',
+        'Test Pool - Chauffage',
+      );
+    });
+
+    it('should use default heater name when IORename is missing', async () => {
+      mockKlereoApi.getPoolDetails.mockResolvedValueOnce({
+        status: 'ok',
+        response: [
+          {
+            idSystem: 12345,
+            poolNickname: 'Test Pool',
+            outs: [
+              {
+                index: 5,
+                type: 0,
+                mode: 1,
+                status: 0,
+                totalTime: 500,
+                offDelay: 0,
+                flags: 16,
+                map: 4,
+                cloneSrc: 0,
+                updateTime: 0,
+                realStatus: 0,
+              },
+            ],
+            probes: [
+              {
+                index: 16,
+                type: 5,
+                status: 0,
+                updated: 0,
+                filteredValue: 10.87,
+                filteredTime: 0,
+                directValue: 10.87,
+                directTime: 0,
+                updateTime: 0,
+              },
+            ],
+            params: { ConsigneEau: 28, HeaterMode: 1, EauMin: 5, EauMax: 35 },
+            IORename: [],
+          } as any,
+        ],
+      });
+
+      if (didFinishLaunchingCallback) {
+        didFinishLaunchingCallback();
+        await flushPromises();
+      }
+
+      expect(mockApi.platformAccessory).toHaveBeenCalledWith(
+        'Test Pool - Pool Heater',
         expect.any(String),
       );
     });
