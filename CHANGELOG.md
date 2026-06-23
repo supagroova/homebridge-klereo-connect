@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-23
+
+### Added
+- **Pool water temperature sensor**: exposes the current pool water temperature as a dedicated HomeKit `TemperatureSensor`, shown as its own tile in the Home app. Registers automatically whenever a water-temperature probe is present.
+- **Pool heater accessory (HeaterCooler)**: exposes pool heating with current water temperature, target setpoint (`ConsigneEau`), and heating state, for pools whose heating is exposed as a controllable output.
+
 ### Changed
 - Renamed `PoolLightAccessory` to `PoolOutputAccessory` for clarity - the accessory handles ALL output types (lights, filters, pumps, heaters, robots, etc.), not just lights
 
 ### Fixed
 - Fixed FormData compatibility with Node.js native fetch API - switched from `form-data` npm package to native FormData
 - Fixed Jest test cleanup - added proper interval cleanup in platform tests to prevent tests from hanging
+- Removed an unused import flagged by ESLint
 
 ## [1.0.0] - 2026-02-03
 
@@ -58,4 +65,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development mode with hot reload (nodemon)
 - Full API documentation
 
+[1.1.0]: https://github.com/supagroova/homebridge-klereo-connect/releases/tag/v1.1.0
 [1.0.0]: https://github.com/lachlanlaycock/homebridge-klereo-connect/releases/tag/v1.0.0

@@ -1,7 +1,7 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 import { KlereoConnectPlatform } from './platform';
 import { KlereoApi } from './klereoApi';
-import { ProbeType, OutputMap } from './types';
+import { ProbeType } from './types';
 import { DEFAULT_POLLING_INTERVAL } from './settings';
 
 /**
