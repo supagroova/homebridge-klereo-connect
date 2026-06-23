@@ -15,6 +15,8 @@ export declare class KlereoConnectPlatform implements DynamicPlatformPlugin {
     private registerOutput;
     private registerPoolHeater;
     private registerPoolTemperature;
+    private registerProbeGauges;
+    private upsertGaugeAccessory;
     private cleanupAccessories;
 }
 //# sourceMappingURL=platform.d.ts.map

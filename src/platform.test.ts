@@ -20,6 +20,15 @@ jest.mock('./poolTemperatureAccessory', () => ({
   PoolTemperatureAccessory: jest.fn(),
 }));
 
+jest.mock('./poolMeasurementAccessory', () => ({
+  PoolMeasurementAccessory: jest.fn(),
+}));
+jest.mock('./poolQualityAccessory', () => ({
+  PoolQualityAccessory: jest.fn(),
+  computeAirQuality: jest.fn(),
+  AirQuality: { UNKNOWN: 0, EXCELLENT: 1, GOOD: 2, FAIR: 3, INFERIOR: 4, POOR: 5 },
+}));
+
 // Helper to flush all pending promises
 const flushPromises = () => Promise.resolve().then(() => Promise.resolve());
 
@@ -818,6 +827,66 @@ describe('KlereoConnectPlatform', () => {
         'Test Pool - Water Temp.',
         expect.any(String),
       );
+    });
+  });
+
+  describe('registerProbeGauges', () => {
+    const withChemistry = {
+      status: 'ok',
+      response: [
+        {
+          idSystem: 12345,
+          poolNickname: 'Test Pool',
+          outs: [],
+          probes: [
+            { index: 17, type: 3, status: 1, filteredValue: 7.84 },
+            { index: 18, type: 4, status: 1, filteredValue: 671.9 },
+          ],
+          params: {
+            ConsignePH: 7.3, pHMin: 6.5, pHMax: 8.0,
+            ConsigneRedox: 680, OrpMin: 480, OrpMax: 1070,
+          },
+          IORename: [],
+        } as any,
+      ],
+    };
+
+    beforeEach(() => {
+      jest.useRealTimers();
+      platform = new KlereoConnectPlatform(mockLogger, mockConfig, mockApi);
+    });
+    afterEach(() => {
+      if (shutdownCallback) shutdownCallback();
+      jest.useFakeTimers();
+    });
+
+    it('registers pH and ORP measurement + status tiles when probes exist', async () => {
+      mockKlereoApi.getPoolDetails.mockResolvedValueOnce(withChemistry);
+      if (didFinishLaunchingCallback) { didFinishLaunchingCallback(); await flushPromises(); }
+
+      expect(mockLogger.info).toHaveBeenCalledWith('Adding new Pool pH:', 'Test Pool - Pool pH');
+      expect(mockLogger.info).toHaveBeenCalledWith('Adding new Pool pH Status:', 'Test Pool - Pool pH Status');
+      expect(mockLogger.info).toHaveBeenCalledWith('Adding new Pool ORP:', 'Test Pool - Pool ORP');
+      expect(mockLogger.info).toHaveBeenCalledWith('Adding new Pool ORP Status:', 'Test Pool - Pool ORP Status');
+    });
+
+    it('skips gauges when no pH/ORP probes are present', async () => {
+      // default mock has only a type-5 water probe
+      if (didFinishLaunchingCallback) { didFinishLaunchingCallback(); await flushPromises(); }
+      expect(mockLogger.info).not.toHaveBeenCalledWith('Adding new Pool pH:', expect.any(String));
+      expect(mockLogger.info).not.toHaveBeenCalledWith('Adding new Pool ORP:', expect.any(String));
+    });
+
+    it('restores a cached gauge accessory', async () => {
+      const cached = {
+        displayName: 'Test Pool - Pool ORP', UUID: 'uuid-klereo-12345-orp',
+        context: {}, getService: jest.fn(), addService: jest.fn(),
+      } as unknown as PlatformAccessory;
+      platform.configureAccessory(cached);
+      mockKlereoApi.getPoolDetails.mockResolvedValueOnce(withChemistry);
+      if (didFinishLaunchingCallback) { didFinishLaunchingCallback(); await flushPromises(); }
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Restoring existing Pool ORP from cache:', 'Test Pool - Pool ORP');
     });
   });
 
