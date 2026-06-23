@@ -18,6 +18,10 @@
     "homebridge": "^1.8.0 || ^2.0.0-beta.0"
   },
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "config.schema.json"
+  ],
   "homebridge": {
     "plugin": "homebridge-klereo-connect",
     "platforms": [
