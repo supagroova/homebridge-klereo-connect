@@ -6,6 +6,7 @@ const types_1 = require("./types");
 const klereoApi_1 = require("./klereoApi");
 const poolOutputAccessory_1 = require("./poolOutputAccessory");
 const poolHeaterAccessory_1 = require("./poolHeaterAccessory");
+const poolTemperatureAccessory_1 = require("./poolTemperatureAccessory");
 class KlereoConnectPlatform {
     log;
     config;
@@ -70,6 +71,7 @@ class KlereoConnectPlatform {
                 const poolDetails = detailsResponse.response[0];
                 await this.registerPoolOutputs(poolDetails);
                 this.registerPoolHeater(poolDetails);
+                this.registerPoolTemperature(poolDetails);
             }
             this.cleanupAccessories();
         }
@@ -167,6 +169,40 @@ class KlereoConnectPlatform {
             accessory.context.eauMin = eauMin;
             accessory.context.eauMax = eauMax;
             new poolHeaterAccessory_1.PoolHeaterAccessory(this, accessory, this.api);
+            this.homebridgeApi.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [accessory]);
+            this.accessories.push(accessory);
+        }
+    }
+    registerPoolTemperature(poolDetails) {
+        const { idSystem, poolNickname, probes, IORename } = poolDetails;
+        const waterProbe = probes.find((p) => p.type === types_1.ProbeType.WATER_TEMPERATURE);
+        if (!waterProbe) {
+            this.log.debug(`No water temperature probe found for pool ${idSystem}, skipping temperature sensor`);
+            return;
+        }
+        let sensorName = 'Water Temperature';
+        if (IORename) {
+            const rename = IORename.find((r) => r.ioType === 2 && r.ioIndex === waterProbe.index);
+            if (rename) {
+                sensorName = rename.name;
+            }
+        }
+        const uuid = this.homebridgeApi.hap.uuid.generate(`klereo-${idSystem}-temperature`);
+        const existingAccessory = this.accessories.find((a) => a.UUID === uuid);
+        if (existingAccessory) {
+            this.log.info('Restoring existing temperature sensor from cache:', existingAccessory.displayName);
+            existingAccessory.context.poolId = idSystem;
+            existingAccessory.context.poolName = poolNickname;
+            existingAccessory.context.sensorName = sensorName;
+            new poolTemperatureAccessory_1.PoolTemperatureAccessory(this, existingAccessory, this.api);
+        }
+        else {
+            this.log.info('Adding new temperature sensor:', `${poolNickname} - ${sensorName}`);
+            const accessory = new this.homebridgeApi.platformAccessory(`${poolNickname} - ${sensorName}`, uuid);
+            accessory.context.poolId = idSystem;
+            accessory.context.poolName = poolNickname;
+            accessory.context.sensorName = sensorName;
+            new poolTemperatureAccessory_1.PoolTemperatureAccessory(this, accessory, this.api);
             this.homebridgeApi.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [accessory]);
             this.accessories.push(accessory);
         }

@@ -9,6 +9,9 @@ jest.mock('./poolOutputAccessory', () => ({
 jest.mock('./poolHeaterAccessory', () => ({
     PoolHeaterAccessory: jest.fn(),
 }));
+jest.mock('./poolTemperatureAccessory', () => ({
+    PoolTemperatureAccessory: jest.fn(),
+}));
 const flushPromises = () => Promise.resolve().then(() => Promise.resolve());
 describe('KlereoConnectPlatform', () => {
     let platform;
@@ -547,6 +550,89 @@ describe('KlereoConnectPlatform', () => {
                 await flushPromises();
             }
             expect(mockApi.platformAccessory).toHaveBeenCalledWith('Test Pool - Pool Heater', expect.any(String));
+        });
+    });
+    describe('registerPoolTemperature', () => {
+        beforeEach(() => {
+            jest.useRealTimers();
+            platform = new platform_1.KlereoConnectPlatform(mockLogger, mockConfig, mockApi);
+        });
+        afterEach(() => {
+            if (shutdownCallback) {
+                shutdownCallback();
+            }
+            jest.useFakeTimers();
+        });
+        it('should register a temperature sensor when a water probe exists', async () => {
+            if (didFinishLaunchingCallback) {
+                didFinishLaunchingCallback();
+                await flushPromises();
+            }
+            expect(mockLogger.info).toHaveBeenCalledWith('Adding new temperature sensor:', 'Test Pool - Water Temperature');
+            expect(mockApi.registerPlatformAccessories).toHaveBeenCalled();
+        });
+        it('should not register a temperature sensor when no water probe exists', async () => {
+            mockKlereoApi.getPoolDetails.mockResolvedValueOnce({
+                status: 'ok',
+                response: [
+                    {
+                        idSystem: 12345,
+                        poolNickname: 'Test Pool',
+                        outs: [],
+                        probes: [],
+                        params: {},
+                        IORename: [],
+                    },
+                ],
+            });
+            if (didFinishLaunchingCallback) {
+                didFinishLaunchingCallback();
+                await flushPromises();
+            }
+            expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('skipping temperature sensor'));
+            expect(mockLogger.info).not.toHaveBeenCalledWith('Adding new temperature sensor:', expect.any(String));
+        });
+        it('should restore a cached temperature sensor', async () => {
+            const cachedSensor = {
+                displayName: 'Test Pool - Water Temperature',
+                UUID: 'uuid-klereo-12345-temperature',
+                context: {},
+                getService: jest.fn(),
+                addService: jest.fn(),
+            };
+            platform.configureAccessory(cachedSensor);
+            if (didFinishLaunchingCallback) {
+                didFinishLaunchingCallback();
+                await flushPromises();
+            }
+            expect(mockLogger.info).toHaveBeenCalledWith('Restoring existing temperature sensor from cache:', 'Test Pool - Water Temperature');
+        });
+        it('should use the probe friendly name from IORename', async () => {
+            mockKlereoApi.getPoolDetails.mockResolvedValueOnce({
+                status: 'ok',
+                response: [
+                    {
+                        idSystem: 12345,
+                        poolNickname: 'Test Pool',
+                        outs: [],
+                        probes: [
+                            {
+                                index: 16,
+                                type: 5,
+                                status: 1,
+                                filteredValue: 29.17,
+                            },
+                        ],
+                        params: {},
+                        IORename: [{ ioType: 2, ioIndex: 16, name: 'Water Temp.' }],
+                    },
+                ],
+            });
+            if (didFinishLaunchingCallback) {
+                didFinishLaunchingCallback();
+                await flushPromises();
+            }
+            expect(mockApi.platformAccessory).toHaveBeenCalledWith('Test Pool - Water Temp.', expect.any(String));
         });
     });
     describe('token refresh', () => {

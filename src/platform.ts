@@ -13,6 +13,7 @@ import { KlereoConnectConfig, PoolDetails, PoolOutput, ProbeType, OutputMap } fr
 import { KlereoApi } from './klereoApi';
 import { PoolOutputAccessory } from './poolOutputAccessory';
 import { PoolHeaterAccessory } from './poolHeaterAccessory';
+import { PoolTemperatureAccessory } from './poolTemperatureAccessory';
 
 /**
  * KlereoConnectPlatform
@@ -117,6 +118,7 @@ export class KlereoConnectPlatform implements DynamicPlatformPlugin {
         const poolDetails = detailsResponse.response[0];
         await this.registerPoolOutputs(poolDetails);
         this.registerPoolHeater(poolDetails);
+        this.registerPoolTemperature(poolDetails);
       }
 
       // Remove accessories that no longer exist
@@ -311,6 +313,79 @@ export class KlereoConnectPlatform implements DynamicPlatformPlugin {
       accessory.context.eauMax = eauMax;
 
       new PoolHeaterAccessory(this, accessory, this.api);
+
+      this.homebridgeApi.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        [accessory],
+      );
+
+      this.accessories.push(accessory);
+    }
+  }
+
+  /**
+   * Register a TemperatureSensor accessory for the pool water temperature
+   */
+  private registerPoolTemperature(poolDetails: PoolDetails) {
+    const { idSystem, poolNickname, probes, IORename } = poolDetails;
+
+    // Find the water temperature probe
+    const waterProbe = probes.find(
+      (p) => p.type === ProbeType.WATER_TEMPERATURE,
+    );
+    if (!waterProbe) {
+      this.log.debug(
+        `No water temperature probe found for pool ${idSystem}, skipping temperature sensor`,
+      );
+      return;
+    }
+
+    // Determine display name from the probe's IORename entry (ioType 2) or default
+    let sensorName = 'Water Temperature';
+    if (IORename) {
+      const rename = IORename.find(
+        (r) => r.ioType === 2 && r.ioIndex === waterProbe.index,
+      );
+      if (rename) {
+        sensorName = rename.name;
+      }
+    }
+
+    // Generate unique UUID for the temperature sensor
+    const uuid = this.homebridgeApi.hap.uuid.generate(
+      `klereo-${idSystem}-temperature`,
+    );
+
+    const existingAccessory = this.accessories.find((a) => a.UUID === uuid);
+
+    if (existingAccessory) {
+      this.log.info(
+        'Restoring existing temperature sensor from cache:',
+        existingAccessory.displayName,
+      );
+
+      existingAccessory.context.poolId = idSystem;
+      existingAccessory.context.poolName = poolNickname;
+      existingAccessory.context.sensorName = sensorName;
+
+      new PoolTemperatureAccessory(this, existingAccessory, this.api);
+    } else {
+      this.log.info(
+        'Adding new temperature sensor:',
+        `${poolNickname} - ${sensorName}`,
+      );
+
+      const accessory = new this.homebridgeApi.platformAccessory(
+        `${poolNickname} - ${sensorName}`,
+        uuid,
+      );
+
+      accessory.context.poolId = idSystem;
+      accessory.context.poolName = poolNickname;
+      accessory.context.sensorName = sensorName;
+
+      new PoolTemperatureAccessory(this, accessory, this.api);
 
       this.homebridgeApi.registerPlatformAccessories(
         PLUGIN_NAME,
