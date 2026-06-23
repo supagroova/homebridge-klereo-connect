@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-23
+
+### Added
+- **Pool pH and ORP sensors**: expose the current pH and ORP (redox) readings in the Home app as raw-value tiles (HomeKit `LightSensor`), plus a per-measurement water-quality status (HomeKit `AirQualitySensor`). The status grades each reading against your Klereo target (`consigne`) and `min`/`max` thresholds — Excellent at target, degrading toward Poor at the band edges — read live from the pool configuration.
+
 ## [1.1.0] - 2026-06-23
 
 ### Added
@@ -65,5 +70,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development mode with hot reload (nodemon)
 - Full API documentation
 
+[1.2.0]: https://github.com/supagroova/homebridge-klereo-connect/releases/tag/v1.2.0
 [1.1.0]: https://github.com/supagroova/homebridge-klereo-connect/releases/tag/v1.1.0
 [1.0.0]: https://github.com/lachlanlaycock/homebridge-klereo-connect/releases/tag/v1.0.0

@@ -1,7 +1,7 @@
 {
   "displayName": "Klereo Connect",
   "name": "homebridge-klereo-connect",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Homebridge plugin for Klereo Connect swimming pool automation system",
   "author": "Lachlan Laycock",
   "license": "MIT",
