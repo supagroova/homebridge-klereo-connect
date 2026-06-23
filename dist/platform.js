@@ -7,6 +7,8 @@ const klereoApi_1 = require("./klereoApi");
 const poolOutputAccessory_1 = require("./poolOutputAccessory");
 const poolHeaterAccessory_1 = require("./poolHeaterAccessory");
 const poolTemperatureAccessory_1 = require("./poolTemperatureAccessory");
+const poolMeasurementAccessory_1 = require("./poolMeasurementAccessory");
+const poolQualityAccessory_1 = require("./poolQualityAccessory");
 class KlereoConnectPlatform {
     log;
     config;
@@ -72,6 +74,7 @@ class KlereoConnectPlatform {
                 await this.registerPoolOutputs(poolDetails);
                 this.registerPoolHeater(poolDetails);
                 this.registerPoolTemperature(poolDetails);
+                this.registerProbeGauges(poolDetails);
             }
             this.cleanupAccessories();
         }
@@ -203,6 +206,56 @@ class KlereoConnectPlatform {
             accessory.context.poolName = poolNickname;
             accessory.context.sensorName = sensorName;
             new poolTemperatureAccessory_1.PoolTemperatureAccessory(this, accessory, this.api);
+            this.homebridgeApi.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [accessory]);
+            this.accessories.push(accessory);
+        }
+    }
+    registerProbeGauges(poolDetails) {
+        const { idSystem, probes } = poolDetails;
+        const gauges = [
+            {
+                key: 'ph', probeType: types_1.ProbeType.PH, label: 'pH',
+                targetParam: 'ConsignePH', minParam: 'pHMin', maxParam: 'pHMax',
+                fallback: { target: 7.3, min: 7.0, max: 7.8 },
+            },
+            {
+                key: 'orp', probeType: types_1.ProbeType.REDOX, label: 'ORP',
+                targetParam: 'ConsigneRedox', minParam: 'OrpMin', maxParam: 'OrpMax',
+                fallback: { target: 700, min: 650, max: 750 },
+            },
+        ];
+        for (const g of gauges) {
+            const probe = probes.find((p) => p.type === g.probeType);
+            if (!probe) {
+                this.log.debug(`No ${g.label} probe (type ${g.probeType}) for pool ${idSystem}, skipping gauges`);
+                continue;
+            }
+            this.upsertGaugeAccessory(poolDetails, g.key, `Pool ${g.label}`, poolMeasurementAccessory_1.PoolMeasurementAccessory, { probeType: g.probeType, sensorName: `Pool ${g.label}` });
+            this.upsertGaugeAccessory(poolDetails, `${g.key}-status`, `Pool ${g.label} Status`, poolQualityAccessory_1.PoolQualityAccessory, {
+                probeType: g.probeType, sensorName: `Pool ${g.label} Status`,
+                targetParam: g.targetParam, minParam: g.minParam, maxParam: g.maxParam,
+                fallback: g.fallback,
+            });
+        }
+    }
+    upsertGaugeAccessory(poolDetails, uuidKey, displayName, AccessoryClass, contextExtras) {
+        const { idSystem, poolNickname } = poolDetails;
+        const uuid = this.homebridgeApi.hap.uuid.generate(`klereo-${idSystem}-${uuidKey}`);
+        const existing = this.accessories.find((a) => a.UUID === uuid);
+        if (existing) {
+            this.log.info(`Restoring existing ${displayName} from cache:`, existing.displayName);
+            existing.context.poolId = idSystem;
+            existing.context.poolName = poolNickname;
+            Object.assign(existing.context, contextExtras);
+            new AccessoryClass(this, existing, this.api);
+        }
+        else {
+            this.log.info(`Adding new ${displayName}:`, `${poolNickname} - ${displayName}`);
+            const accessory = new this.homebridgeApi.platformAccessory(`${poolNickname} - ${displayName}`, uuid);
+            accessory.context.poolId = idSystem;
+            accessory.context.poolName = poolNickname;
+            Object.assign(accessory.context, contextExtras);
+            new AccessoryClass(this, accessory, this.api);
             this.homebridgeApi.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [accessory]);
             this.accessories.push(accessory);
         }

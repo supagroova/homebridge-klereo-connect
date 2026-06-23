@@ -14,6 +14,8 @@ import { KlereoApi } from './klereoApi';
 import { PoolOutputAccessory } from './poolOutputAccessory';
 import { PoolHeaterAccessory } from './poolHeaterAccessory';
 import { PoolTemperatureAccessory } from './poolTemperatureAccessory';
+import { PoolMeasurementAccessory } from './poolMeasurementAccessory';
+import { PoolQualityAccessory } from './poolQualityAccessory';
 
 /**
  * KlereoConnectPlatform
@@ -119,6 +121,7 @@ export class KlereoConnectPlatform implements DynamicPlatformPlugin {
         await this.registerPoolOutputs(poolDetails);
         this.registerPoolHeater(poolDetails);
         this.registerPoolTemperature(poolDetails);
+        this.registerProbeGauges(poolDetails);
       }
 
       // Remove accessories that no longer exist
@@ -393,6 +396,87 @@ export class KlereoConnectPlatform implements DynamicPlatformPlugin {
         [accessory],
       );
 
+      this.accessories.push(accessory);
+    }
+  }
+
+  /**
+   * Register raw-value + status tiles for the pH and ORP probes.
+   */
+  private registerProbeGauges(poolDetails: PoolDetails) {
+    const { idSystem, probes } = poolDetails;
+
+    const gauges = [
+      {
+        key: 'ph', probeType: ProbeType.PH, label: 'pH',
+        targetParam: 'ConsignePH', minParam: 'pHMin', maxParam: 'pHMax',
+        fallback: { target: 7.3, min: 7.0, max: 7.8 },
+      },
+      {
+        key: 'orp', probeType: ProbeType.REDOX, label: 'ORP',
+        targetParam: 'ConsigneRedox', minParam: 'OrpMin', maxParam: 'OrpMax',
+        fallback: { target: 700, min: 650, max: 750 },
+      },
+    ];
+
+    for (const g of gauges) {
+      const probe = probes.find((p) => p.type === g.probeType);
+      if (!probe) {
+        this.log.debug(
+          `No ${g.label} probe (type ${g.probeType}) for pool ${idSystem}, skipping gauges`,
+        );
+        continue;
+      }
+
+      this.upsertGaugeAccessory(
+        poolDetails, g.key, `Pool ${g.label}`, PoolMeasurementAccessory,
+        { probeType: g.probeType, sensorName: `Pool ${g.label}` },
+      );
+      this.upsertGaugeAccessory(
+        poolDetails, `${g.key}-status`, `Pool ${g.label} Status`, PoolQualityAccessory,
+        {
+          probeType: g.probeType, sensorName: `Pool ${g.label} Status`,
+          targetParam: g.targetParam, minParam: g.minParam, maxParam: g.maxParam,
+          fallback: g.fallback,
+        },
+      );
+    }
+  }
+
+  /**
+   * Create or restore a single gauge accessory, applying the supplied context.
+   */
+  private upsertGaugeAccessory(
+    poolDetails: PoolDetails,
+    uuidKey: string,
+    displayName: string,
+    AccessoryClass: new (
+      platform: KlereoConnectPlatform,
+      accessory: PlatformAccessory,
+      api: KlereoApi,
+    ) => unknown,
+    contextExtras: Record<string, unknown>,
+  ) {
+    const { idSystem, poolNickname } = poolDetails;
+    const uuid = this.homebridgeApi.hap.uuid.generate(`klereo-${idSystem}-${uuidKey}`);
+    const existing = this.accessories.find((a) => a.UUID === uuid);
+
+    if (existing) {
+      this.log.info(`Restoring existing ${displayName} from cache:`, existing.displayName);
+      existing.context.poolId = idSystem;
+      existing.context.poolName = poolNickname;
+      Object.assign(existing.context, contextExtras);
+      new AccessoryClass(this, existing, this.api);
+    } else {
+      this.log.info(`Adding new ${displayName}:`, `${poolNickname} - ${displayName}`);
+      const accessory = new this.homebridgeApi.platformAccessory(
+        `${poolNickname} - ${displayName}`, uuid,
+      );
+      accessory.context.poolId = idSystem;
+      accessory.context.poolName = poolNickname;
+      Object.assign(accessory.context, contextExtras);
+      new AccessoryClass(this, accessory, this.api);
+      this.homebridgeApi.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       this.accessories.push(accessory);
     }
   }
