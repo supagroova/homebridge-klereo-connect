@@ -2,8 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KlereoConnectPlatform = void 0;
 const settings_1 = require("./settings");
+const types_1 = require("./types");
 const klereoApi_1 = require("./klereoApi");
 const poolOutputAccessory_1 = require("./poolOutputAccessory");
+const poolHeaterAccessory_1 = require("./poolHeaterAccessory");
 class KlereoConnectPlatform {
     log;
     config;
@@ -67,6 +69,7 @@ class KlereoConnectPlatform {
                 }
                 const poolDetails = detailsResponse.response[0];
                 await this.registerPoolOutputs(poolDetails);
+                this.registerPoolHeater(poolDetails);
             }
             this.cleanupAccessories();
         }
@@ -85,6 +88,9 @@ class KlereoConnectPlatform {
             }
         }
         for (const output of outs) {
+            if (output.map === types_1.OutputMap.HEATING) {
+                continue;
+            }
             if (output.mode === 0 && output.status === 0 && output.totalTime === 0) {
                 continue;
             }
@@ -113,6 +119,54 @@ class KlereoConnectPlatform {
             accessory.context.outputIndex = output.index;
             accessory.context.outputName = outputName;
             new poolOutputAccessory_1.PoolOutputAccessory(this, accessory, this.api);
+            this.homebridgeApi.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [accessory]);
+            this.accessories.push(accessory);
+        }
+    }
+    registerPoolHeater(poolDetails) {
+        const { idSystem, poolNickname, outs, probes, IORename } = poolDetails;
+        const waterProbe = probes.find((p) => p.type === types_1.ProbeType.WATER_TEMPERATURE);
+        if (!waterProbe) {
+            this.log.debug(`No water temperature probe found for pool ${idSystem}, skipping heater accessory`);
+            return;
+        }
+        const heatingOutput = outs.find((o) => o.map === types_1.OutputMap.HEATING);
+        if (!heatingOutput) {
+            this.log.debug(`No heating output found for pool ${idSystem}, skipping heater accessory`);
+            return;
+        }
+        const params = poolDetails.params || {};
+        const eauMin = typeof params.EauMin === 'number' ? params.EauMin : 0;
+        const eauMax = typeof params.EauMax === 'number' ? params.EauMax : 40;
+        let heaterName = 'Pool Heater';
+        if (IORename) {
+            const rename = IORename.find((r) => r.ioType === 1 && r.ioIndex === heatingOutput.index);
+            if (rename) {
+                heaterName = rename.name;
+            }
+        }
+        const uuid = this.homebridgeApi.hap.uuid.generate(`klereo-${idSystem}-heater`);
+        const existingAccessory = this.accessories.find((a) => a.UUID === uuid);
+        if (existingAccessory) {
+            this.log.info('Restoring existing heater accessory from cache:', existingAccessory.displayName);
+            existingAccessory.context.poolId = idSystem;
+            existingAccessory.context.poolName = poolNickname;
+            existingAccessory.context.heatingOutputIndex = heatingOutput.index;
+            existingAccessory.context.outputName = heaterName;
+            existingAccessory.context.eauMin = eauMin;
+            existingAccessory.context.eauMax = eauMax;
+            new poolHeaterAccessory_1.PoolHeaterAccessory(this, existingAccessory, this.api);
+        }
+        else {
+            this.log.info('Adding new heater accessory:', `${poolNickname} - ${heaterName}`);
+            const accessory = new this.homebridgeApi.platformAccessory(`${poolNickname} - ${heaterName}`, uuid);
+            accessory.context.poolId = idSystem;
+            accessory.context.poolName = poolNickname;
+            accessory.context.heatingOutputIndex = heatingOutput.index;
+            accessory.context.outputName = heaterName;
+            accessory.context.eauMin = eauMin;
+            accessory.context.eauMax = eauMax;
+            new poolHeaterAccessory_1.PoolHeaterAccessory(this, accessory, this.api);
             this.homebridgeApi.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [accessory]);
             this.accessories.push(accessory);
         }

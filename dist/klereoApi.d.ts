@@ -21,5 +21,7 @@ export declare class KlereoApi {
     setOutput(poolId: number, outputIndex: number, state: boolean): Promise<number>;
     waitForCommand(cmdId: number): Promise<WaitCommandResponse>;
     setOutputAndWait(poolId: number, outputIndex: number, state: boolean): Promise<void>;
+    setParam(poolId: number, paramId: string, newValue: number): Promise<number>;
+    setParamAndWait(poolId: number, paramId: string, newValue: number): Promise<void>;
 }
 //# sourceMappingURL=klereoApi.d.ts.map

@@ -202,6 +202,21 @@ export interface SetOutResponse {
         poolID: number;
     }>;
 }
+export interface SetParamResponse {
+    status: string;
+    response: Array<{
+        cmdID: number;
+        poolID: number;
+    }>;
+}
+export declare enum OutputMap {
+    LIGHTS = 0,
+    FILTER = 1,
+    PH_MINUS = 2,
+    CHLORINE = 3,
+    HEATING = 4,
+    ROBOT = 5
+}
 export interface WaitCommandResponse {
     status: string;
     response: {

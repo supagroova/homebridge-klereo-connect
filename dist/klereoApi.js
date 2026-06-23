@@ -138,6 +138,27 @@ class KlereoApi {
         const cmdId = await this.setOutput(poolId, outputIndex, state);
         await this.waitForCommand(cmdId);
     }
+    async setParam(poolId, paramId, newValue) {
+        await this.ensureAuthenticated();
+        this.logger?.debug(`Setting pool ${poolId} param ${paramId} to ${newValue}`);
+        const response = await this.makeRequest('SetParam.php', {
+            poolID: poolId.toString(),
+            paramID: paramId,
+            newValue: newValue.toString(),
+            comMode: '1',
+            lang: 'en',
+        });
+        if (response.status !== 'ok' || !response.response[0]) {
+            throw new Error(`Failed to set parameter ${paramId}`);
+        }
+        const cmdID = response.response[0].cmdID;
+        this.logger?.debug(`Command ID ${cmdID} created for param ${paramId}`);
+        return cmdID;
+    }
+    async setParamAndWait(poolId, paramId, newValue) {
+        const cmdId = await this.setParam(poolId, paramId, newValue);
+        await this.waitForCommand(cmdId);
+    }
 }
 exports.KlereoApi = KlereoApi;
 //# sourceMappingURL=klereoApi.js.map
