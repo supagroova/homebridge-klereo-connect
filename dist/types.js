@@ -1,6 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ProbeType = exports.OutputType = void 0;
+exports.ProbeType = exports.OutputType = exports.OutputMap = void 0;
+var OutputMap;
+(function (OutputMap) {
+    OutputMap[OutputMap["LIGHTS"] = 0] = "LIGHTS";
+    OutputMap[OutputMap["FILTER"] = 1] = "FILTER";
+    OutputMap[OutputMap["PH_MINUS"] = 2] = "PH_MINUS";
+    OutputMap[OutputMap["CHLORINE"] = 3] = "CHLORINE";
+    OutputMap[OutputMap["HEATING"] = 4] = "HEATING";
+    OutputMap[OutputMap["ROBOT"] = 5] = "ROBOT";
+})(OutputMap || (exports.OutputMap = OutputMap = {}));
 var OutputType;
 (function (OutputType) {
     OutputType[OutputType["LIGHTS"] = 0] = "LIGHTS";
